@@ -1,6 +1,5 @@
 import unittest
 import marketbeat_scraper as mb
-import user_defined_exceptions
 
 
 class TestMarketBeat(unittest.TestCase):
