@@ -1,6 +1,6 @@
 import unittest
 import marketbeat_scraper as mb
-
+import user_defined_exceptions as ude
 
 class TestMarketBeat(unittest.TestCase):
     def test_date_na(self):
@@ -17,6 +17,10 @@ class TestMarketBeat(unittest.TestCase):
 
     def test_num_dict(self):
         self.assertEqual(len(mb.run("2019-02-20")), 99)
+
+    def test_invalid_date(self):
+        with self.assertRaises(ude.URLRequestError):
+            mb.get_soup("1000-01-01")
 
 
 if __name__ == "__main__":
