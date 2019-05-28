@@ -117,7 +117,3 @@ def run(date):
     except (ude.EmptyTableError, ValueError):
         print(f"[Error] No data found, please check the date")
     return res_list
-
-
-if __name__ == "__main__":
-    res = run("2019-02-20")
