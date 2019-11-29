@@ -6,40 +6,25 @@
 [![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
 
 ## Description
-This tool collects analyst actions (upgrades, downgrades, etc.) of major brokerage houses happened on a given day from the `MarketBeat` website.
+This tool collects today's analyst actions (upgrades, downgrades, etc.) of major brokerage houses for US companies (including OTC markets).
 
 ## Usage
-1.  Create a new directory somewhere.
-2.  Open the Start Menu, type `cmd` in the search field, and then press Enter.
-3.  Clone the project by running (make sure that you are in the newly created directory first!):
-```txt
-git clone https://github.com/Zsolt-Forray/marketbeat-scraper.git
-```
-4.  Scraper is found in the `marketbeat-scraper` folder.
-5.  Import the scraper.
-
 `Data Source: https://www.marketbeat.com/`
 
 ![Screenshot](/png/input.png)
 
 ### Usage Example
-Collect all available analyst actions happened on 2019-02-21.
+Collect all available today's analyst actions.
 
 ```python
-import marketbeat_scraper as mb
-import pprint
+#!/usr/bin/python3
 
-pp = pprint.PrettyPrinter(indent=4)
+import marketbeat_scraper as mbs
 
-res = mb.run("2019-02-21")
+sc = mbs.MarketBeatScraper()
+res = sc.run_app()
 
-# Get all actions
-pp.pprint(res)
-
-# From the 'res' list you can select 'action' you want to know
-# Receive Upgrades
-upgrades = [i for i in res if i["Action"]=="Upgrades"]
-pp.pprint(upgrades)
+print(res)
 ```
 
 ### Output
@@ -51,6 +36,5 @@ List/Dictionary of analyst actions.
 MIT
 
 ## Contributions
-Contributions to MarketBeat Scraper are always welcome.  
-If you have questions, suggestions or want to improve this repository, please create an [issue](https://github.com/Zsolt-Forray/marketbeat-scraper/issues) or [pull requests](https://github.com/Zsolt-Forray/marketbeat-scraper/pulls).  
+Contributions to this repository are always welcome.
 This repo is maintained by Zsolt Forray (forray.zsolt@gmail.com).
