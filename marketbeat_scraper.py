@@ -1,119 +1,121 @@
+#!/usr/bin/python3
+
+
 """
 -------------------------------------------------------------------------
                             BROKERAGE ACTIONS
 -------------------------------------------------------------------------
+This script gathers today's analyst actions (upgrades, downgrades, etc.)
+of major brokerage houses for US companies (including OTC markets).
 
-This script gathers analyst actions (upgrades, downgrades, etc.)
-of major brokerage houses from www.marketbeat.com.
-
-|
-| Input parameter(s):   Date
-|                       eg. "2019-02-20"
-|
-
-Date:   Date of the requested analyst actions from 2019-01-01
-        to the current day, eg. format: "2019-02-20"
-
+Source: www.marketbeat.com
 -------------------------------------------------------------------------
 """
+
+
+__author__  = 'Zsolt Forray'
+__license__ = 'MIT'
+__version__ = '0.0.1'
+__date__    = '29/11/2019'
+__status__  = 'Development'
+
 
 import requests
 from bs4 import BeautifulSoup as bs
 import re
-from datetime import datetime
-import user_defined_exceptions as ude
 
-def check_date(date):
-    date_dt = datetime.strptime(date, "%Y-%m-%d").date()
-    last_date = datetime.now().date()
-    start_date = datetime(2019, 1, 1).date()
-    if date_dt > last_date:
-        raise ude.DateLaterError()
-    elif date_dt < start_date:
-        raise ude.DateEarlierError()
-    return date
 
-def get_soup(date):
-    url = "https://www.marketbeat.com/ratings/USA/{}".format(date)
-    FEED_TIMEOUT = 10
-    req = requests.get(url, timeout=FEED_TIMEOUT)
+class MarketBeatScraper:
+    def __init__(self):
+        self.url = "https://www.marketbeat.com/ratings"
 
-    if req.status_code != 200:
-        raise ude.URLRequestError()
-    soup = bs(req.text, "html.parser")
-    return soup
+    def get_soup(self):
+        # Get BeautifulSoup object
+        CONNECT_TIMEOUT = 10
+        READ_TIMEOUT = 10
+        self.req = requests.get(url=self.url, timeout=(CONNECT_TIMEOUT, READ_TIMEOUT))
+        self.soup = bs(self.req.content, "lxml")
 
-def check_table(soup):
-    table_soup = soup.find_all("table")
-    if len(table_soup) == 0:
-        raise ude.EmptyTableError()
-    return table_soup
+    def get_raw_table(self):
+        # Get raw data table
+        self.table_soup = self.soup.find_all("table")
 
-def get_table(table_soup):
-    for table in table_soup:
-        return table
+    @staticmethod
+    def get_table(table_soup):
+        for table in table_soup:
+            return table
 
-def get_data(date, table):
-    res_list = []
-    for tr in table.find_all("tr"):
-        td_list = [i.text.encode("utf-8") for i in tr]
+    @staticmethod
+    def actions():
+        return ("Downgraded", "Upgraded", "Target Raised", "Target Lowered", \
+                "Target Set", "Reiterated", "Initiated")
 
-        # If company name (ticker) found and we are not in header
-        if len(td_list[2]) > 0 and td_list[0] != b"Brokerage":
-            # Ticker Symbol
-            symbol_list = re.findall(b"\(\w+\)|\(\w+\.\w+\)", td_list[2])
-            symbol = re.findall(b"\w+|\w+\.\w+", symbol_list[0])[0]
-            symbol = symbol.decode("utf-8")
+    @staticmethod
+    def get_company(ticker, cols, index):
+        if not MarketBeatScraper.check_empty_col(cols[index]):
+            return cols[index].replace(ticker, "")
 
-            # Company Name
-            company = re.sub(b"\s\(\w+\)", b"", td_list[2])
-            company = company.replace(b",", b"")
-            company = company.decode("utf-8")
+    @staticmethod
+    def get_action(cols, index):
+        if not MarketBeatScraper.check_empty_col(cols[index]):
+            return cols[index].replace("by", "")
 
-            # Brokerage Firm
-            brokerage = td_list[0].replace(b",", b"")
-            brokerage = brokerage.decode("utf-8")
+    @staticmethod
+    def get_brokerage(cols, index):
+        if not MarketBeatScraper.check_empty_col(cols[index]):
+            return cols[index]
 
-            # Actions
-            action = re.sub(b"^\s", b"", td_list[1])
-            action = action.decode("utf-8")
+    @staticmethod
+    def get_prices(cols, index):
+        if not MarketBeatScraper.check_empty_col(cols[index]):
+            price = cols[index].replace(" \u279D ", "/") # change (->)
+            price = re.sub("^[$]\d+\/|^[$]\d+\.\d+\/", "", price)
+            pattern = "\d+\.\d+|\d+"
+            return float(re.findall(pattern, price)[0])
 
-            # Price Targets
-            target = re.sub(b"^\s", b"", td_list[4])
-            # To replace the invalid '\u279D' (->) character
-            decoded_target = target.decode("utf-8", "replace")
-            target = decoded_target.replace(" \u279D ", "/")
-            after_target = re.sub("\d+\/|\d+\.\d+\/", "", target)
-            after_target = after_target.replace("$", "")
+    @staticmethod
+    def get_rating(cols, index):
+        if not MarketBeatScraper.check_empty_col(cols[index]):
+            rating = cols[index].replace(" \u279D ", "/") # change (->)
+            return re.sub("\w+\/|\w+\s\w+\/", "", rating)
 
-            # Ratings
-            rating = td_list[5]
+    @staticmethod
+    def check_empty_col(cell):
+        if cell == "":
+            return True
 
-            # To replace the invalid '\u279D' (->) character
-            decoded_rating = rating.decode("utf-8", "replace")
-            rating = decoded_rating.replace(" \u279D ", "/")
-            after_rating = re.sub("\w+\/|\w+\s\w+\/", "", rating)
+    def get_rows(self):
+        table = MarketBeatScraper.get_table(self.table_soup)
+        actions = MarketBeatScraper.actions()
 
-            # Collect Results
-            res_dict = dict(Date=date, Action=action, Ticker=symbol, Company=company,
-                            Brokerage=brokerage, Rating=after_rating, Target=after_target)
-            res_list.append(res_dict)
-    return res_list
+        self.result_list = []
+        for row in table.find_all("tr")[1:]: # header excluded
+            if any(i in row.text for i in actions) \
+               and "C$" not in row.text and "$" in row.text:
+                self.ticker = row.find_all("div", class_="ticker-area")[0].text
+                cols = [i.text for i in row]
+                self.company = MarketBeatScraper.get_company(self.ticker, cols, 0)
+                self.action = MarketBeatScraper.get_action(cols, 1)
+                self.brokerage = MarketBeatScraper.get_brokerage(cols, 2)
+                self.current_price = MarketBeatScraper.get_prices(cols, 3)
+                self.target_price = MarketBeatScraper.get_prices(cols, 4)
+                self.rating = MarketBeatScraper.get_rating(cols, 5)
 
-def run(date):
-    res_list = []
-    try:
-        date = check_date(date)
-        soup = get_soup(date)
-        table_soup = check_table(soup)
-        table = get_table(table_soup)
-        res_list = get_data(date, table)
-    except ude.DateLaterError:
-        print("[Error] Invalid date: date can not be later than today")
-    except ude.DateEarlierError:
-        print("[Error] Invalid date: date can not be earlier than '2019-01-01'")
-    except (requests.exceptions.Timeout, ude.URLRequestError):
-        print("[Error] Connection problem: please try again later or try an other date")
-    except (ude.EmptyTableError, ValueError):
-        print(f"[Error] No data found, please check the date")
-    return res_list
+                result_dict = self.collect_result()
+                self.result_list.append(result_dict)
+
+    def collect_result(self):
+        return dict(ticker=self.ticker, company=self.company, action=self.action,\
+                    brokerage=self.brokerage, current_price=self.current_price,\
+                    target_price=self.target_price, rating=self.rating)
+
+    def run_app(self):
+        self.get_soup()
+        self.get_raw_table()
+        self.get_rows()
+        return self.result_list
+
+
+if __name__ == "__main__":
+    mbs = MarketBeatScraper()
+    mbs.run_app()
