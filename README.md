@@ -1,4 +1,4 @@
-# marketbeat-scraper
+# Marketbeat Scraper
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/0b0d6c99353e4d3d91ac2385c9ae17e3)](https://www.codacy.com/app/forray.zsolt/marketbeat-scraper?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Zsolt-Forray/marketbeat-scraper&amp;utm_campaign=Badge_Grade)
 [![Python 3.6](https://img.shields.io/badge/python-3.6-blue.svg)](https://www.python.org/downloads/release/python-360/)
